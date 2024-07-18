@@ -11,7 +11,9 @@ class CName : public Component
 {
 public:
   std::string name;
-  CName(std::string &name) : name(name) {};
+
+  CName() = default;
+  CName(std::string &name) : name(name) {}
 };
 
 class CInput : public Component
@@ -22,41 +24,42 @@ public:
   bool right = false;
   bool down = false;
 
-  CInput() {}
+  CInput() = default;
 };
 
-class CTransform
+class CTransform : public Component
 {
 public:
   Vector2 position = {0.0, 0.0}; // center
   Vector2 velocity = {0.0, 0.0};
   float angle = 0;
 
+  CTransform() = default;
   CTransform(const Vector2 &p, const Vector2 &v, float a)
       : position(p), velocity(v), angle(a) {}
 };
 
-class CShape
-{
+
+
+class Shape {
 public:
   Color color;
   float rotation = 0.0f;
-  virtual void draw(const Vector2 &position) = 0;
+  virtual void draw(const Vector2 &position) {};
 
-  CShape() {}
-  CShape(Color color) :color(color)
-  {
-  }
+  Shape() = default;
+  Shape(Color color) :color(color) {}
 };
 
-class ShapeRing : public CShape
+class Ring : public Shape
 {
 public:
   float innerRadius;
   float outterRadius;
 
-  ShapeRing(float inner, float outter, Color color)
-      : CShape(color), innerRadius(inner), outterRadius(outter)
+  Ring() = default;
+  Ring(float inner, float outter, Color color)
+      : Shape(color), innerRadius(inner), outterRadius(outter)
   {
   }
 
@@ -66,24 +69,38 @@ public:
   }
 };
 
-class ShapeRectangle : public CShape
+class Rect : public Shape
 {
+public:
   float width;
   float height;
 
-  ShapeRectangle(float w, float h, Color c)
-      : CShape(), width(w), height(h) {}
+  Rect() = default;
+  Rect(float w, float h, Color c)
+      : Shape(), width(w), height(h) {}
 };
 
-class ShapePoly : public CShape
+class ShapePoly : public Shape
 {
+public:
   int sides;
   float radius;
+
+  ShapePoly() = default;
+};
+
+class CShape : public Component
+{
+public:
+  std::unique_ptr<Shape> shape;
+  CShape() = default;
+  CShape(std::unique_ptr<Shape> shape) : shape(std::move(shape)) {}
 };
 
 class CCollision : public Component
 {
 public:
+  CCollision() = default;
 };
 
 class CollisionTriangle : public CCollision
@@ -93,7 +110,7 @@ class CollisionTriangle : public CCollision
 class CollisionCircle : public CCollision
 {
   float radius;
-  
+
 };
 
 class CollisionRectangle : public CCollision

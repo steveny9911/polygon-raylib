@@ -85,9 +85,16 @@ void Engine::spawnPlayer()
   Vector2 position = m_window.GetSize() / 2.0f;
   Vector2 velocity = {0.0, 0.0};
 
-  player->cTransform = std::make_shared<CTransform>(position, velocity, 0.0);
-  player->cShape = std::make_shared<ShapeRing>(80.0f, 190.0f, RED);
-  player->cInput = std::make_shared<CInput>();
+  player->addComponent<CTransform>(position, velocity, 0.0);
+  Ring r(80.0f, 190.0f, RED);
+  player->addComponent<CShape>(std::make_unique<Ring>(80.0f, 190.0f, RED));
+  // player->addComponent<CShape>();
+  // player->getComponent<CShape>().shape = std::make_unique<Ring>(80.0f, 190.0f, RED);
+  player->addComponent<CInput>();
+
+  // // player->cTransform = std::make_shared<CTransform>();
+  // player->cShape = std::make_shared<ShapeRing>(80.0f, 190.0f, RED);
+  // player->cInput = std::make_shared<CInput>();
 
   m_player = player;
 }
@@ -99,9 +106,9 @@ void Engine::sDraw()
 
   for (auto e : entityManager.getEntities())
   {
-    if (e->cShape)
+    if (e->hasComponent<CShape>())
     {
-      e->cShape->draw(e->cTransform->position);
+      e->getComponent<CShape>().shape->draw(e->getComponent<CTransform>().position);
     }
   }
 
@@ -110,56 +117,68 @@ void Engine::sDraw()
 
 void Engine::sUserInput()
 {
-  m_player->cInput->up = IsKeyDown(KEY_W);
-  m_player->cInput->down = IsKeyDown(KEY_S);
-  m_player->cInput->left = IsKeyDown(KEY_A);
-  m_player->cInput->right = IsKeyDown(KEY_D);
+  
+  m_player->getComponent<CInput>().up = IsKeyDown(KEY_W);
+  m_player->getComponent<CInput>().down = IsKeyDown(KEY_S);
+  m_player->getComponent<CInput>().left = IsKeyDown(KEY_A);
+  m_player->getComponent<CInput>().right = IsKeyDown(KEY_D);
+
+  if (IsKeyDown(KEY_W) || IsKeyDown(KEY_S) || IsKeyDown(KEY_A) || IsKeyDown(KEY_D))
+  {
+    std::cout << m_player->getComponent<CInput>().up;
+    std::cout << m_player->getComponent<CInput>().down;
+    std::cout << m_player->getComponent<CInput>().left;
+    std::cout << m_player->getComponent<CInput>().right << std::endl;
+  }
 
   m_paused = IsKeyPressed(KEY_P);
 }
 
 void Engine::sMovement()
 {
-  m_player->cTransform->velocity = Vector2Zero();
+  auto &playerInput = m_player->getComponent<CInput>();
+  auto &playerTransform = m_player->getComponent<CTransform>();
+
+  playerTransform.velocity = Vector2Zero();
 
   // 8 directions total
   // up only
-  if (m_player->cInput->up && !m_player->cInput->down && !m_player->cInput->left && !m_player->cInput->right)
-    m_player->cTransform->velocity.y = -SPEED;
+  if (playerInput.up && !playerInput.down && !playerInput.left && !playerInput.right)
+    playerTransform.velocity.y = -SPEED;
 
   // down only
-  else if (m_player->cInput->down && !m_player->cInput->up && !m_player->cInput->left && !m_player->cInput->right)
-    m_player->cTransform->velocity.y = SPEED;
+  else if (playerInput.down && !playerInput.up && !playerInput.left && !playerInput.right)
+    playerTransform.velocity.y = SPEED;
 
   // left
-  else if (m_player->cInput->left && !m_player->cInput->right && !m_player->cInput->up && !m_player->cInput->down)
-    m_player->cTransform->velocity.x = -SPEED;
+  else if (playerInput.left && !playerInput.right && !playerInput.up && !playerInput.down)
+    playerTransform.velocity.x = -SPEED;
 
   // right
-  else if (!m_player->cInput->left && m_player->cInput->right && !m_player->cInput->up && !m_player->cInput->down)
-    m_player->cTransform->velocity.x = SPEED;
+  else if (!playerInput.left && playerInput.right && !playerInput.up && !playerInput.down)
+    playerTransform.velocity.x = SPEED;
 
   // up right
-  else if (!m_player->cInput->left && m_player->cInput->right && m_player->cInput->up && !m_player->cInput->down)
-    m_player->cTransform->velocity = Vector2{SPEED * cosf(PI / 4.0f), -SPEED * sinf(PI / 4.0f)};
+  else if (!playerInput.left && playerInput.right && playerInput.up && !playerInput.down)
+    playerTransform.velocity = Vector2{SPEED * cosf(PI / 4.0f), -SPEED * sinf(PI / 4.0f)};
 
   // up left
-  else if (m_player->cInput->left && !m_player->cInput->right && m_player->cInput->up && !m_player->cInput->down)
-    m_player->cTransform->velocity = Vector2{-SPEED * cosf(PI / 4.0f), -SPEED * sinf(PI / 4.0f)};
+  else if (playerInput.left && !playerInput.right && playerInput.up && !playerInput.down)
+    playerTransform.velocity = Vector2{-SPEED * cosf(PI / 4.0f), -SPEED * sinf(PI / 4.0f)};
 
   // down right
-  else if (!m_player->cInput->left && m_player->cInput->right && !m_player->cInput->up && m_player->cInput->down)
-    m_player->cTransform->velocity = Vector2{SPEED * cosf(PI / 4.0f), SPEED * sinf(PI / 4.0f)};
+  else if (!playerInput.left && playerInput.right && !playerInput.up && playerInput.down)
+    playerTransform.velocity = Vector2{SPEED * cosf(PI / 4.0f), SPEED * sinf(PI / 4.0f)};
 
   // down left
-  else if (m_player->cInput->left && !m_player->cInput->right && !m_player->cInput->up && m_player->cInput->down)
-    m_player->cTransform->velocity = Vector2{-SPEED * cosf(PI / 4.0f), SPEED * sinf(PI / 4.0f)};
+  else if (playerInput.left && !playerInput.right && !playerInput.up && playerInput.down)
+    playerTransform.velocity = Vector2{-SPEED * cosf(PI / 4.0f), SPEED * sinf(PI / 4.0f)};
 
   for (auto e : entityManager.getEntities())
   {
     // Sample movement speed update
-    e->cTransform->position.x += e->cTransform->velocity.x;
-    e->cTransform->position.y += e->cTransform->velocity.y;
+    playerTransform.position.x += playerTransform.velocity.x;
+    playerTransform.position.y += playerTransform.velocity.y;
   }
 
   // if player moves to wall stop it
