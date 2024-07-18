@@ -2,15 +2,18 @@
 #include <memory>
 #include <raylib-cpp.hpp>
 #include "EntityManager.h"
+#include "Action.h"
 
 float SPEED = 10.0f;
+
+typedef std::map<int, std::string> ActionMap;
 
 class Engine
 {
 private:
   raylib::Window m_window;
-
-  EntityManager entityManager;
+  EntityManager m_entityManager;
+  ActionMap m_actionMap;
 
   size_t m_currentFrame = 0;
   bool m_paused = false;
@@ -24,6 +27,10 @@ private:
   void sDraw();
   void sCollision();
 
+  void sDoAction(const Action &action);
+  void doAction(const Action &action);
+  void registerAction(KeyboardKey input, const std::string &actionName);
+
   void sEnemySpawner();
 
   std::shared_ptr<Entity> m_player;
@@ -32,12 +39,7 @@ private:
   void spawnBullet(std::shared_ptr<Entity> entity, const Vector2 &mousePos);
 
 public:
-  raylib::Window &window();
-
   void run();
-  void update();
-  void draw();
-  void quit();
 
   Engine()
   {
@@ -59,7 +61,7 @@ void Engine::run()
   SetTargetFPS(60);
   while (isRunning())
   {
-    entityManager.update();
+    m_entityManager.update();
 
     if (!m_paused)
     {
@@ -81,12 +83,11 @@ void Engine::setPaused(bool paused)
 
 void Engine::spawnPlayer()
 {
-  auto player = entityManager.addEntity("Player");
+  auto player = m_entityManager.addEntity("Player");
   Vector2 position = m_window.GetSize() / 2.0f;
   Vector2 velocity = {0.0, 0.0};
 
   player->addComponent<CTransform>(position, velocity, 0.0);
-  Ring r(80.0f, 190.0f, RED);
   player->addComponent<CShape>(std::make_unique<Ring>(80.0f, 190.0f, RED));
   // player->addComponent<CShape>();
   // player->getComponent<CShape>().shape = std::make_unique<Ring>(80.0f, 190.0f, RED);
@@ -104,7 +105,7 @@ void Engine::sDraw()
   BeginDrawing();
   ClearBackground(BLACK);
 
-  for (auto e : entityManager.getEntities())
+  for (auto e : m_entityManager.getEntities())
   {
     if (e->hasComponent<CShape>())
     {
@@ -117,7 +118,7 @@ void Engine::sDraw()
 
 void Engine::sUserInput()
 {
-  
+
   m_player->getComponent<CInput>().up = IsKeyDown(KEY_W);
   m_player->getComponent<CInput>().down = IsKeyDown(KEY_S);
   m_player->getComponent<CInput>().left = IsKeyDown(KEY_A);
@@ -174,7 +175,7 @@ void Engine::sMovement()
   else if (playerInput.left && !playerInput.right && !playerInput.up && playerInput.down)
     playerTransform.velocity = Vector2{-SPEED * cosf(PI / 4.0f), SPEED * sinf(PI / 4.0f)};
 
-  for (auto e : entityManager.getEntities())
+  for (auto e : m_entityManager.getEntities())
   {
     // Sample movement speed update
     playerTransform.position.x += playerTransform.velocity.x;
