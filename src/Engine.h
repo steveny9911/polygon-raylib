@@ -156,44 +156,24 @@ void Engine::sMovement()
 
   playerTransform.velocity = Vector2Zero();
 
-  // 8 directions total
-  // up only
-  if (playerInput.up && !playerInput.down && !playerInput.left && !playerInput.right)
-    playerTransform.velocity.y = -SPEED;
+  if (playerInput.up)
+    playerTransform.velocity.y = -1;
+  if (playerInput.down)
+    playerTransform.velocity.y = 1;
+  if (playerInput.left)
+    playerTransform.velocity.x = -1;
+  if (playerInput.right)
+    playerTransform.velocity.x = 1;
 
-  // down only
-  else if (playerInput.down && !playerInput.up && !playerInput.left && !playerInput.right)
-    playerTransform.velocity.y = SPEED;
-
-  // left
-  else if (playerInput.left && !playerInput.right && !playerInput.up && !playerInput.down)
-    playerTransform.velocity.x = -SPEED;
-
-  // right
-  else if (!playerInput.left && playerInput.right && !playerInput.up && !playerInput.down)
-    playerTransform.velocity.x = SPEED;
-
-  // up right
-  else if (!playerInput.left && playerInput.right && playerInput.up && !playerInput.down)
-    playerTransform.velocity = Vector2{SPEED * cosf(PI / 4.0f), -SPEED * sinf(PI / 4.0f)};
-
-  // up left
-  else if (playerInput.left && !playerInput.right && playerInput.up && !playerInput.down)
-    playerTransform.velocity = Vector2{-SPEED * cosf(PI / 4.0f), -SPEED * sinf(PI / 4.0f)};
-
-  // down right
-  else if (!playerInput.left && playerInput.right && !playerInput.up && playerInput.down)
-    playerTransform.velocity = Vector2{SPEED * cosf(PI / 4.0f), SPEED * sinf(PI / 4.0f)};
-
-  // down left
-  else if (playerInput.left && !playerInput.right && !playerInput.up && playerInput.down)
-    playerTransform.velocity = Vector2{-SPEED * cosf(PI / 4.0f), SPEED * sinf(PI / 4.0f)};
+  playerTransform.velocity = Vector2Scale(Vector2Normalize(playerTransform.velocity), SPEED);
 
   for (auto e : m_entityManager.getEntities())
   {
-    // Sample movement speed update
-    playerTransform.position.x += playerTransform.velocity.x;
-    playerTransform.position.y += playerTransform.velocity.y;
+    if (playerTransform.velocity.x != 0 || playerTransform.velocity.y != 0)
+    {
+      playerTransform.position.x += playerTransform.velocity.x;
+      playerTransform.position.y += playerTransform.velocity.y;
+    }
   }
 
   // if player moves to wall stop it
