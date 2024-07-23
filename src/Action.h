@@ -1,15 +1,31 @@
 #include <string>
 
+enum class ActionType
+{
+  NONE,
+  START,
+  END
+};
+enum class ActionName
+{
+  NONE,
+  UP,
+  DOWN,
+  LEFT,
+  RIGHT,
+  PAUSE
+};
+
 class Action
 {
 private:
-  const std::string m_name = "DEFAULT_NAME";
-  const std::string m_type = "DEFAULT_TYPE";
+  const ActionName m_name = ActionName::NONE;
+  const ActionType m_type = ActionType::NONE;
 
 public:
   Action() {};
-  Action(const std::string &name, const std::string &type) : m_name(name), m_type(type) {}
+  Action(const ActionName name, const ActionType type) : m_name(name), m_type(type) {}
 
-  const std::string &name() const { return m_name; };
-  const std::string &type() const { return m_type; };
+  const ActionName name() const { return m_name; };
+  ActionType type() const { return m_type; };
 };

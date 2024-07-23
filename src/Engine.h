@@ -1,4 +1,4 @@
-#include <map>
+#include <unordered_map>
 #include <memory>
 #include <raylib-cpp.hpp>
 #include "EntityManager.h"
@@ -6,7 +6,7 @@
 
 float SPEED = 10.0f;
 
-typedef std::map<int, std::string> ActionMap;
+typedef std::unordered_map<KeyboardKey, ActionName> ActionMap;
 
 class Engine
 {
@@ -28,8 +28,8 @@ private:
   void sCollision();
 
   void sDoAction(const Action &action);
-  void doAction(const Action &action);
-  void registerAction(KeyboardKey input, const std::string &actionName);
+  void registerAction(KeyboardKey input, const ActionName actionName);
+  void registerActions();
 
   void sEnemySpawner();
 
@@ -47,6 +47,7 @@ public:
     m_window.Init(1080, 720, "Polygon Survivour");
     SetTargetFPS(120);
 
+    registerActions();
     spawnPlayer();
   };
 };
@@ -79,6 +80,20 @@ void Engine::run()
 void Engine::setPaused(bool paused)
 {
   m_paused = paused;
+}
+
+void Engine::registerAction(KeyboardKey input, const ActionName actionName)
+{
+  m_actionMap[input] = actionName;
+}
+
+void Engine::registerActions()
+{
+  registerAction(KEY_W, ActionName::UP);
+  registerAction(KEY_A, ActionName::LEFT);
+  registerAction(KEY_S, ActionName::DOWN);
+  registerAction(KEY_D, ActionName::RIGHT);
+  registerAction(KEY_P, ActionName::PAUSE);
 }
 
 void Engine::spawnPlayer()
@@ -118,21 +133,20 @@ void Engine::sDraw()
 
 void Engine::sUserInput()
 {
-
-  m_player->getComponent<CInput>().up = IsKeyDown(KEY_W);
-  m_player->getComponent<CInput>().down = IsKeyDown(KEY_S);
-  m_player->getComponent<CInput>().left = IsKeyDown(KEY_A);
-  m_player->getComponent<CInput>().right = IsKeyDown(KEY_D);
-
-  if (IsKeyDown(KEY_W) || IsKeyDown(KEY_S) || IsKeyDown(KEY_A) || IsKeyDown(KEY_D))
+  KeyboardKey input = KEY_NULL;
+  while (input = static_cast<KeyboardKey>(GetKeyPressed()))
   {
-    std::cout << m_player->getComponent<CInput>().up;
-    std::cout << m_player->getComponent<CInput>().down;
-    std::cout << m_player->getComponent<CInput>().left;
-    std::cout << m_player->getComponent<CInput>().right << std::endl;
+    if (!m_actionMap.contains(input))
+      return;
+
+    sDoAction(Action(m_actionMap.at(input), ActionType::START));
   }
 
-  m_paused = IsKeyPressed(KEY_P);
+  for (auto &[key, _] : m_actionMap)
+  {
+    if (IsKeyUp(key))
+      sDoAction(Action(m_actionMap.at(key), ActionType::END));
+  }
 }
 
 void Engine::sMovement()
@@ -196,4 +210,34 @@ void Engine::sMovement()
     m_player->cTransform->position.y -= m_player->cTransform->velocity.y;
   }
   */
+}
+
+void Engine::sDoAction(const Action &action)
+{
+  auto &playerInput = m_player->getComponent<CInput>();
+
+  if (action.type() == ActionType::START)
+  {
+    if (action.name() == ActionName::UP)
+      playerInput.up = true;
+    else if (action.name() == ActionName::LEFT)
+      playerInput.left = true;
+    else if (action.name() == ActionName::DOWN)
+      playerInput.down = true;
+    else if (action.name() == ActionName::RIGHT)
+      playerInput.right = true;
+    else if (action.name() == ActionName::PAUSE)
+      setPaused(!m_paused);
+  }
+  else if (action.type() == ActionType::END)
+  {
+    if (action.name() == ActionName::UP)
+      playerInput.up = false;
+    else if (action.name() == ActionName::LEFT)
+      playerInput.left = false;
+    else if (action.name() == ActionName::DOWN)
+      playerInput.down = false;
+    else if (action.name() == ActionName::RIGHT)
+      playerInput.right = false;
+  }
 }
