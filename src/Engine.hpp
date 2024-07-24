@@ -1,10 +1,13 @@
 #include <unordered_map>
 #include <memory>
+#include <chrono>
 #include <raylib-cpp.hpp>
-#include "EntityManager.h"
-#include "Action.h"
+#include "EntityManager.hpp"
+#include "Components/Components.hpp"
+#include "Action.hpp"
 
 float SPEED = 10.0f;
+double BULLET_INTERVAL = 1.0;
 
 typedef std::unordered_map<KeyboardKey, ActionName> ActionMap;
 
@@ -25,6 +28,7 @@ private:
   void sMovement();
   void sUserInput();
   void sDraw();
+  void sUpdate();
   void sCollision();
 
   void sDoAction(const Action &action);
@@ -33,10 +37,13 @@ private:
 
   void sEnemySpawner();
 
+  double m_prevTime;
+
   std::shared_ptr<Entity> m_player;
   void spawnPlayer();
+  void spawnPlayerBullet();
   void spawnEnemy();
-  void spawnBullet(std::shared_ptr<Entity> entity, const Vector2 &mousePos);
+  void spawnBullet(std::shared_ptr<Entity> entity, const Vector2 &target);
 
 public:
   void run();
@@ -60,6 +67,8 @@ bool Engine::isRunning()
 void Engine::run()
 {
   SetTargetFPS(60);
+  m_prevTime = GetTime();
+
   while (isRunning())
   {
     m_entityManager.update();
@@ -67,9 +76,12 @@ void Engine::run()
     if (!m_paused)
     {
       sMovement();
+      spawnPlayerBullet();
 
       m_currentFrame++;
     }
+
+    std::cout << GetFPS() << std::endl;
 
     sUserInput();
 
@@ -102,15 +114,10 @@ void Engine::spawnPlayer()
   Vector2 position = m_window.GetSize() / 2.0f;
   Vector2 velocity = {0.0, 0.0};
 
-  player->addComponent<CTransform>(position, velocity, 0.0);
-  player->addComponent<CShape>(std::make_unique<Ring>(80.0f, 190.0f, RED));
-  // player->addComponent<CShape>();
-  // player->getComponent<CShape>().shape = std::make_unique<Ring>(80.0f, 190.0f, RED);
+  player->addComponent<CTransform>(position, velocity);
+  player->addComponent<CShape>(std::make_unique<Ring>(0.0f, 100.0f, RED));
   player->addComponent<CInput>();
-
-  // // player->cTransform = std::make_shared<CTransform>();
-  // player->cShape = std::make_shared<ShapeRing>(80.0f, 190.0f, RED);
-  // player->cInput = std::make_shared<CInput>();
+  player->addComponent<CHealth>();
 
   m_player = player;
 }
@@ -131,6 +138,25 @@ void Engine::sDraw()
   EndDrawing();
 }
 
+void Engine::spawnPlayerBullet()
+{
+  if (GetTime() - m_prevTime >= BULLET_INTERVAL)
+  {
+    spawnBullet(m_player, GetMousePosition());
+    m_prevTime = GetTime();
+  }
+}
+
+void Engine::spawnBullet(std::shared_ptr<Entity> entity, const Vector2 &target)
+{
+  auto bullet = m_entityManager.addEntity("Bullet" + std::to_string(m_currentFrame));
+
+  Vector2 bulletVelocity = Vector2Scale(Vector2Normalize(Vector2Subtract(target, entity->getComponent<CTransform>().position)), SPEED);
+  bullet->addComponent<CTransform>(entity->getComponent<CTransform>().position, bulletVelocity);
+
+  bullet->addComponent<CShape>(std::make_unique<Ring>(0.0f, 10.0f, WHITE));
+}
+
 void Engine::sUserInput()
 {
   KeyboardKey input = KEY_NULL;
@@ -146,6 +172,11 @@ void Engine::sUserInput()
   {
     if (IsKeyUp(key))
       sDoAction(Action(m_actionMap.at(key), ActionType::END));
+  }
+
+  if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+  {
+    spawnBullet(m_player, GetMousePosition());
   }
 }
 
@@ -169,10 +200,12 @@ void Engine::sMovement()
 
   for (auto e : m_entityManager.getEntities())
   {
-    if (playerTransform.velocity.x != 0 || playerTransform.velocity.y != 0)
+    auto &transform = e->getComponent<CTransform>();
+
+    if (transform.velocity.x != 0 || transform.velocity.y != 0)
     {
-      playerTransform.position.x += playerTransform.velocity.x;
-      playerTransform.position.y += playerTransform.velocity.y;
+      transform.position.x += transform.velocity.x;
+      transform.position.y += transform.velocity.y;
     }
   }
 
@@ -219,5 +252,13 @@ void Engine::sDoAction(const Action &action)
       playerInput.down = false;
     else if (action.name() == ActionName::RIGHT)
       playerInput.right = false;
+  }
+}
+
+void Engine::sUpdate()
+{
+  for (auto e : m_entityManager.getEntities())
+  {
+    e->update();
   }
 }

@@ -1,14 +1,13 @@
-#include "Components.h"
+#include "Components/Components.hpp"
 #include <memory>
 #include <string>
 #include <tuple>
 
 typedef std::tuple<
     CTransform,
-    CName,
     CInput,
     CShape,
-    CCollision>
+    CHealth>
     ComponentTuple;
 
 class Entity
@@ -21,11 +20,11 @@ private:
   ComponentTuple m_components;
 
 public:
-  std::shared_ptr<CName> cName;
   std::shared_ptr<CInput> cInput;
-  std::shared_ptr<CCollision> cCollision;
 
   Entity(const std::string &tag, size_t id) : m_tag(tag), m_id(id) {}
+
+  virtual void update() {};
 
   bool isActive() const { return m_active; }
   const std::string &tag() const { return m_tag; }
