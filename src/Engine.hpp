@@ -41,7 +41,7 @@ private:
 
   std::shared_ptr<Entity> m_player;
   void spawnPlayer();
-  void spawnPlayerBullet();
+  void sIntervalTimer();
   void spawnEnemy();
   void spawnBullet(std::shared_ptr<Entity> entity, const Vector2 &target);
 
@@ -76,7 +76,7 @@ void Engine::run()
     if (!m_paused)
     {
       sMovement();
-      spawnPlayerBullet();
+      sIntervalTimer();
 
       m_currentFrame++;
     }
@@ -138,12 +138,27 @@ void Engine::sDraw()
   EndDrawing();
 }
 
-void Engine::spawnPlayerBullet()
+void Engine::sIntervalTimer()
 {
   if (GetTime() - m_prevTime >= BULLET_INTERVAL)
   {
     spawnBullet(m_player, GetMousePosition());
     m_prevTime = GetTime();
+  }
+
+  double currentTime = GetTime();
+
+  for (auto e : m_entityManager.getEntities())
+  {
+    if (!e->hasComponent<CIntervalTimer>())
+      continue;
+
+    auto &timer = e->getComponent<CIntervalTimer>();
+
+    if (currentTime - timer.prevTime >= timer.interval)
+    {
+      std::cout << "Time's up" << "\n";
+    }
   }
 }
 
@@ -252,13 +267,5 @@ void Engine::sDoAction(const Action &action)
       playerInput.down = false;
     else if (action.name() == ActionName::RIGHT)
       playerInput.right = false;
-  }
-}
-
-void Engine::sUpdate()
-{
-  for (auto e : m_entityManager.getEntities())
-  {
-    e->update();
   }
 }
