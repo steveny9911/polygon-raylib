@@ -8,7 +8,8 @@ typedef std::tuple<
     CInput,
     CShape,
     CHealth,
-    CIntervalTimer>
+    CTimer,
+    CLifespan>
     ComponentTuple;
 
 class Entity

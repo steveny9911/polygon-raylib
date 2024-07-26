@@ -5,6 +5,7 @@
 #include "CInput.hpp"
 #include "CShape.hpp"
 #include "CTransform.hpp"
-#include "CIntervalTimer.hpp"
+#include "CTimer.hpp"
+#include "CLifespan.hpp"
 
 #endif

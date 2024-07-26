@@ -11,7 +11,7 @@ double BULLET_INTERVAL = 1.0;
 
 typedef std::unordered_map<KeyboardKey, ActionName> ActionMap;
 
-class Engine
+class Game
 {
 private:
   raylib::Window m_window;
@@ -30,25 +30,23 @@ private:
   void sDraw();
   void sUpdate();
   void sCollision();
+  void sTimer();
+  void sLifespan();
 
   void sDoAction(const Action &action);
   void registerAction(KeyboardKey input, const ActionName actionName);
   void registerActions();
 
-  void sEnemySpawner();
-
   double m_prevTime;
 
   std::shared_ptr<Entity> m_player;
   void spawnPlayer();
-  void sIntervalTimer();
-  void spawnEnemy();
-  void spawnBullet(std::shared_ptr<Entity> entity, const Vector2 &target);
+  void spawnEnemies();
 
 public:
   void run();
 
-  Engine()
+  Game()
   {
     m_window = raylib::Window();
     m_window.Init(1080, 720, "Polygon Survivour");
@@ -56,18 +54,18 @@ public:
 
     registerActions();
     spawnPlayer();
+    spawnEnemies();
   };
 };
 
-bool Engine::isRunning()
+bool Game::isRunning()
 {
   return m_running & !m_window.ShouldClose();
 }
 
-void Engine::run()
+void Game::run()
 {
   SetTargetFPS(60);
-  m_prevTime = GetTime();
 
   while (isRunning())
   {
@@ -76,30 +74,28 @@ void Engine::run()
     if (!m_paused)
     {
       sMovement();
-      sIntervalTimer();
+      sTimer();
+      sLifespan();
 
       m_currentFrame++;
     }
 
-    std::cout << GetFPS() << std::endl;
-
     sUserInput();
-
     sDraw();
   }
 }
 
-void Engine::setPaused(bool paused)
+void Game::setPaused(bool paused)
 {
   m_paused = paused;
 }
 
-void Engine::registerAction(KeyboardKey input, const ActionName actionName)
+void Game::registerAction(KeyboardKey input, const ActionName actionName)
 {
   m_actionMap[input] = actionName;
 }
 
-void Engine::registerActions()
+void Game::registerActions()
 {
   registerAction(KEY_W, ActionName::UP);
   registerAction(KEY_A, ActionName::LEFT);
@@ -108,21 +104,7 @@ void Engine::registerActions()
   registerAction(KEY_P, ActionName::PAUSE);
 }
 
-void Engine::spawnPlayer()
-{
-  auto player = m_entityManager.addEntity("Player");
-  Vector2 position = m_window.GetSize() / 2.0f;
-  Vector2 velocity = {0.0, 0.0};
-
-  player->addComponent<CTransform>(position, velocity);
-  player->addComponent<CShape>(std::make_unique<Ring>(0.0f, 100.0f, RED));
-  player->addComponent<CInput>();
-  player->addComponent<CHealth>();
-
-  m_player = player;
-}
-
-void Engine::sDraw()
+void Game::sDraw()
 {
   BeginDrawing();
   ClearBackground(BLACK);
@@ -135,44 +117,53 @@ void Engine::sDraw()
     }
   }
 
+  DrawText(TextFormat("Num of Entities: %i", m_entityManager.getEntities().size()), 0, 0, 20, RED);
+  DrawText(TextFormat("Elapsed Time: %02.02f ms", GetFrameTime()*1000), 0, 20, 20, RED);
+
   EndDrawing();
 }
 
-void Engine::sIntervalTimer()
+void Game::sTimer()
 {
-  if (GetTime() - m_prevTime >= BULLET_INTERVAL)
-  {
-    spawnBullet(m_player, GetMousePosition());
-    m_prevTime = GetTime();
-  }
-
-  double currentTime = GetTime();
-
   for (auto e : m_entityManager.getEntities())
   {
-    if (!e->hasComponent<CIntervalTimer>())
+    if (!e->hasComponent<CTimer>())
       continue;
 
-    auto &timer = e->getComponent<CIntervalTimer>();
+    auto &timer = e->getComponent<CTimer>();
+    if (!timer.isActive)
+      return;
 
-    if (currentTime - timer.prevTime >= timer.interval)
+    timer.timeElapsed += GetFrameTime(); // add delta time (seconds)
+    if (timer.timeElapsed >= timer.interval)
     {
-      std::cout << "Time's up" << "\n";
+      timer.onInterval();
+
+      if (timer.repeat)
+        timer.timeElapsed = 0.0;
+      else
+        timer.isActive = false;
     }
   }
 }
 
-void Engine::spawnBullet(std::shared_ptr<Entity> entity, const Vector2 &target)
+void Game::sLifespan()
 {
-  auto bullet = m_entityManager.addEntity("Bullet" + std::to_string(m_currentFrame));
+  for (auto e : m_entityManager.getEntities())
+  {
 
-  Vector2 bulletVelocity = Vector2Scale(Vector2Normalize(Vector2Subtract(target, entity->getComponent<CTransform>().position)), SPEED);
-  bullet->addComponent<CTransform>(entity->getComponent<CTransform>().position, bulletVelocity);
-
-  bullet->addComponent<CShape>(std::make_unique<Ring>(0.0f, 10.0f, WHITE));
+    if (!e->hasComponent<CLifespan>())
+      continue;;
+    
+    auto &lifespan = e->getComponent<CLifespan>();
+    if (GetTime() - lifespan.createdAt > lifespan.duration)
+    {
+      e->destroy();
+    }
+  }
 }
 
-void Engine::sUserInput()
+void Game::sUserInput()
 {
   KeyboardKey input = KEY_NULL;
   while (input = static_cast<KeyboardKey>(GetKeyPressed()))
@@ -188,14 +179,9 @@ void Engine::sUserInput()
     if (IsKeyUp(key))
       sDoAction(Action(m_actionMap.at(key), ActionType::END));
   }
-
-  if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
-  {
-    spawnBullet(m_player, GetMousePosition());
-  }
 }
 
-void Engine::sMovement()
+void Game::sMovement()
 {
   auto &playerInput = m_player->getComponent<CInput>();
   auto &playerTransform = m_player->getComponent<CTransform>();
@@ -240,7 +226,7 @@ void Engine::sMovement()
   */
 }
 
-void Engine::sDoAction(const Action &action)
+void Game::sDoAction(const Action &action)
 {
   auto &playerInput = m_player->getComponent<CInput>();
 
@@ -268,4 +254,58 @@ void Engine::sDoAction(const Action &action)
     else if (action.name() == ActionName::RIGHT)
       playerInput.right = false;
   }
+}
+
+// =======================================================
+// =======================================================
+
+void Game::spawnPlayer()
+{
+  auto player = m_entityManager.addEntity("Player");
+  Vector2 position = m_window.GetSize() / 2.0f;
+  Vector2 velocity = {0.0, 0.0};
+
+  player->addComponent<CTransform>(position, velocity);
+  player->addComponent<CShape>(std::make_unique<Ring>(0.0f, 100.0f, RED));
+  player->addComponent<CInput>();
+  player->addComponent<CHealth>();
+  player->addComponent<CTimer>(1.0, true, [this](){
+    auto bullet = m_entityManager.addEntity("Bullet" + std::to_string(GetTime()));
+
+    Vector2 target = GetMousePosition();
+    Vector2 origin = m_player->getComponent<CTransform>().position;
+    Vector2 velocity = Vector2Scale(Vector2Normalize(Vector2Subtract(target, origin)), SPEED);
+    bullet->addComponent<CTransform>(origin, velocity);
+
+    bullet->addComponent<CShape>(std::make_unique<Ring>(0.0f, 10.0f, WHITE));
+    bullet->addComponent<CLifespan>(1.0, GetTime());
+  });
+
+  m_player = player;
+}
+
+void Game::spawnEnemies()
+{
+  int totalEnemies = 50;
+  int numEnemies = 0;
+  auto enemySpawner = m_entityManager.addEntity("EnemySpawner");
+  auto spawnEnemy = [this, numEnemies, totalEnemies, enemySpawner]() mutable {
+    if (numEnemies > totalEnemies)
+    {
+      enemySpawner->destroy();
+    }
+
+    auto enemy = m_entityManager.addEntity("Enemy" + std::to_string(numEnemies));
+    enemy->addComponent<CLifespan>(10.0, GetTime());
+    
+    Vector2 target = m_player->getComponent<CTransform>().position;
+    Vector2 origin = {0, 0};
+    Vector2 velocity = Vector2Scale(Vector2Normalize(Vector2Subtract(target, origin)), SPEED);
+    enemy->addComponent<CTransform>(origin, velocity);
+
+    enemy->addComponent<CShape>(std::make_unique<Ring>(0.0f, 10.0f, BLUE));
+
+    numEnemies += 1;
+  };
+  enemySpawner->addComponent<CTimer>(0.1, true, spawnEnemy);
 }

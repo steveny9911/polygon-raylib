@@ -1,9 +1,9 @@
-#include "Engine.hpp"
+#include "Game.hpp"
 #include <raylib-cpp.hpp>
 
 int main() {
 
-  Engine e;
+  Game e;
   e.run();
 
   return 0;
