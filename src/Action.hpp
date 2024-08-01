@@ -1,4 +1,8 @@
+#pragma once
+
 #include <string>
+#include <unordered_map>
+#include <raylib-cpp.hpp>
 
 enum class ActionType
 {
@@ -29,3 +33,5 @@ public:
   const ActionName name() const { return m_name; };
   ActionType type() const { return m_type; };
 };
+
+typedef std::unordered_map<KeyboardKey, ActionName> ActionMap;

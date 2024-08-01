@@ -1,4 +1,5 @@
 #include <iostream>
+#include <functional>
 
 #include "raylib-cpp.hpp"
 #include "Component.hpp"
