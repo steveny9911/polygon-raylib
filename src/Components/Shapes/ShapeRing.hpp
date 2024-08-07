@@ -1,26 +1,14 @@
-#pragma once
-
 #include "raylib-cpp.hpp"
+#include "Shapes.hpp"
 
-class Shape
-{
-public:
-  Color color;
-  float rotation = 0.0f;
-  virtual void draw(const Vector2 &position) {};
-
-  Shape() = default;
-  Shape(Color color) : color(color) {}
-};
-
-class Ring : public Shape
+class ShapeRing : public Shape
 {
 public:
   float innerRadius;
   float outterRadius;
 
-  Ring() = default;
-  Ring(float inner, float outter, Color color)
+  ShapeRing() = default;
+  ShapeRing(float inner, float outter, Color color)
       : Shape(color), innerRadius(inner), outterRadius(outter)
   {
   }

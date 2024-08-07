@@ -1,6 +1,7 @@
 #include <memory>
 #include <chrono>
 #include <raylib-cpp.hpp>
+#include "Entity.h"
 #include "Constants.hpp"
 #include "EntityManager.hpp"
 #include "Action.hpp"

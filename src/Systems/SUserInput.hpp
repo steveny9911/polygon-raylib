@@ -46,7 +46,7 @@ public:
   void update() override
   {
     KeyboardKey input = KEY_NULL;
-    while (input = static_cast<KeyboardKey>(GetKeyPressed()))
+    while ((input = static_cast<KeyboardKey>(GetKeyPressed())))
     {
       if (!m_actionMap.contains(input))
         return;

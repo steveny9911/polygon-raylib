@@ -3,7 +3,7 @@
 #include <raylib-cpp.hpp>
 #include "Constants.hpp"
 #include "EntityManager.hpp"
-#include "Components/Components.hpp"
+#include "Components/Components.h"
 #include "Systems/Systems.hpp"
 #include "Action.hpp"
 
@@ -35,6 +35,7 @@ void Game::run()
   SMovement sMovement(m_entityManager, m_player);
   SUserInput sUserInput(m_entityManager, this, m_actionMap, m_player);
   SDraw sDraw(m_entityManager);
+  SCollision sCollision(m_entityManager);
 
   SetTargetFPS(60);
 
@@ -47,6 +48,7 @@ void Game::run()
       sMovement.update();
       sTimer.update();
       sLifespan.update();
+      sCollision.update();
 
       m_currentFrame++;
     }
@@ -84,12 +86,14 @@ void Game::spawnPlayer()
   Vector2 position = m_window.GetSize() / 2.0f;
   Vector2 velocity = {0.0, 0.0};
 
+  float radius = 20.0f;
+
   player->addComponent<CTransform>(position, velocity);
-  player->addComponent<CShape>(std::make_unique<Ring>(0.0f, 100.0f, RED));
+  player->addComponent<CShape>(std::make_unique<ShapeRing>(0.0f, radius, RED));
   player->addComponent<CInput>();
   player->addComponent<CHealth>();
-  player->addComponent<CTimer>(1.0, true, [this]()
-                               {
+  std::function<void()> spawnBullet = [this]()
+  {
     auto bullet = m_entityManager.addEntity("Bullet" + std::to_string(GetTime()));
 
     Vector2 target = GetMousePosition();
@@ -97,35 +101,108 @@ void Game::spawnPlayer()
     Vector2 velocity = Vector2Scale(Vector2Normalize(Vector2Subtract(target, origin)), SPEED);
     bullet->addComponent<CTransform>(origin, velocity);
 
-    bullet->addComponent<CShape>(std::make_unique<Ring>(0.0f, 10.0f, WHITE));
-    bullet->addComponent<CLifespan>(1.0, GetTime()); });
+    bullet->addComponent<CShape>(std::make_unique<ShapeRing>(0.0f, 10.0f, WHITE));
+    bullet->addComponent<CLifespan>(20.0, GetTime());
+  };
+  // player->addComponent<CTimer>(1.0, true, spawnBullet);
+  player->addComponent<CCollision>(std::make_unique<ColliderCircle>(radius));
 
   m_player = player;
 }
 
 void Game::spawnEnemies()
 {
-  int totalEnemies = 50;
-  int numEnemies = 0;
-  auto enemySpawner = m_entityManager.addEntity("EnemySpawner");
-  auto spawnEnemy = [this, numEnemies, totalEnemies, enemySpawner]() mutable
-  {
-    if (numEnemies > totalEnemies)
-    {
-      enemySpawner->destroy();
-    }
+  auto enemy = m_entityManager.addEntity("Enemy");
+  enemy->addComponent<CTransform>(Vector2{100, 100}, Vector2{0, 0});
 
-    auto enemy = m_entityManager.addEntity("Enemy" + std::to_string(numEnemies));
-    enemy->addComponent<CLifespan>(10.0, GetTime());
+  enemy->addComponent<CShape>(std::make_unique<ShapeRing>(0.0f, 20.0f, BLUE));
+  enemy->addComponent<CCollision>(std::make_unique<ColliderCircle>(20.0f));
 
-    Vector2 target = m_player->getComponent<CTransform>().position;
-    Vector2 origin = {0, 0};
-    Vector2 velocity = Vector2Scale(Vector2Normalize(Vector2Subtract(target, origin)), SPEED);
-    enemy->addComponent<CTransform>(origin, velocity);
+  // enum Direction
+  // {
+  //   UP,
+  //   DOWN,
+  //   LEFT,
+  //   RIGHT
+  // };
 
-    enemy->addComponent<CShape>(std::make_unique<Ring>(0.0f, 10.0f, BLUE));
+  // int totalEnemies = 1;
+  // int numEnemies = 0;
+  // float radius = 20.0f;
 
-    numEnemies += 1;
-  };
-  enemySpawner->addComponent<CTimer>(0.1, true, spawnEnemy);
+  // const float stepSize = GetScreenHeight() / 10;
+  // Direction direction = Direction::RIGHT;
+  // Vector2 spawnOrigin{0.0f, 0.0f};
+
+  // auto enemySpawner = m_entityManager.addEntity("EnemySpawner");
+  // std::function<void()> spawnEnemy = [=]() mutable
+  // {
+  //   if (numEnemies > totalEnemies)
+  //   {
+  //     enemySpawner->destroy();
+  //   }
+
+  //   auto enemy = m_entityManager.addEntity("Enemy" + std::to_string(numEnemies));
+  //   enemy->addComponent<CLifespan>(10.0, GetTime());
+
+  //   switch (direction)
+  //   {
+  //   case Direction::UP:
+  //     if (spawnOrigin.y - stepSize >= 0.0f)
+  //     {
+  //       spawnOrigin.y -= stepSize;
+  //     }
+  //     else
+  //     {
+  //       spawnOrigin.y = 0.0f;
+  //       direction = RIGHT;
+  //     }
+  //     break;
+  //   case Direction::DOWN:
+  //     if (spawnOrigin.y + stepSize <= GetScreenHeight())
+  //     {
+  //       spawnOrigin.y += stepSize;
+  //     }
+  //     else
+  //     {
+  //       spawnOrigin.y = GetScreenHeight();
+  //       direction = LEFT;
+  //     }
+  //     break;
+  //   case Direction::LEFT:
+  //     if (spawnOrigin.x - stepSize >= 0.0f)
+  //     {
+  //       spawnOrigin.x -= stepSize;
+  //     }
+  //     else
+  //     {
+  //       spawnOrigin.x = 0.0f;
+  //       direction = UP;
+  //     }
+  //     break;
+  //   case Direction::RIGHT:
+  //     if (spawnOrigin.x + stepSize <= GetScreenWidth())
+  //     {
+  //       spawnOrigin.x += stepSize;
+  //     }
+  //     else
+  //     {
+  //       spawnOrigin.x = GetScreenWidth();
+  //       direction = DOWN;
+  //     }
+  //     break;
+  //   default:
+  //     break;
+  //   }
+
+  //   Vector2 target = m_player->getComponent<CTransform>().position;
+  //   Vector2 velocity = Vector2Scale(Vector2Normalize(Vector2Subtract(target, spawnOrigin)), SPEED / 3);
+  //   enemy->addComponent<CTransform>(spawnOrigin, velocity);
+
+  //   enemy->addComponent<CShape>(std::make_unique<ShapeRing>(0.0f, 20.0f, BLUE));
+  //   enemy->addComponent<CCollision>(std::make_unique<ColliderCircle>(radius));
+
+  //   numEnemies += 1;
+  // };
+  // enemySpawner->addComponent<CTimer>(0.3f, true, spawnEnemy);
 }

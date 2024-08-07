@@ -1,4 +1,4 @@
-#include "Components.hpp"
+#include "Component.hpp"
 
 class CInput : public Component
 {

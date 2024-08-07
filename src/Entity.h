@@ -1,7 +1,9 @@
-#include "Components/Components.hpp"
+#pragma once
+
 #include <memory>
 #include <string>
 #include <tuple>
+#include "Components/Components.h"
 
 typedef std::tuple<
     CTransform,
@@ -9,7 +11,8 @@ typedef std::tuple<
     CShape,
     CHealth,
     CTimer,
-    CLifespan>
+    CLifespan,
+    CCollision>
     ComponentTuple;
 
 class Entity
@@ -24,23 +27,23 @@ private:
 public:
   std::shared_ptr<CInput> cInput;
 
-  Entity(const std::string &tag, size_t id) : m_tag(tag), m_id(id) {}
+  Entity(const std::string &tag, size_t id) : m_tag(tag), m_id(id) {};
 
   virtual void update() {};
 
-  bool isActive() const { return m_active; }
-  const std::string &tag() const { return m_tag; }
-  const size_t id() const { return m_id; }
-  void destroy() { m_active = false; }
+  bool isActive() const { return m_active; };
+  const std::string &tag() const { return m_tag; };
+  const size_t id() const { return m_id; };
+  void destroy() { m_active = false; };
 
   template <typename T>
-  T &getComponent() { return std::get<T>(m_components); }
+  T &getComponent() { return std::get<T>(m_components); };
 
   template <typename T>
-  const T &getComponent() const { return std::get<T>(m_components); }
+  const T &getComponent() const { return std::get<T>(m_components); };
 
   template <typename T>
-  bool hasComponent() const { return getComponent<T>().has; }
+  bool hasComponent() const { return getComponent<T>().has; };
 
   template <typename T, typename... TArgs>
   T &addComponent(TArgs &&...mArgs)
@@ -49,8 +52,8 @@ public:
     component = T(std::forward<TArgs>(mArgs)...);
     component.has = true;
     return component;
-  }
+  };
 
   template <typename T>
-  void removeComponent() { getComponent<T>() = T(); }
+  void removeComponent() { getComponent<T>() = T(); };
 };

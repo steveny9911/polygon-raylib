@@ -7,5 +7,6 @@
 #include "CTransform.hpp"
 #include "CTimer.hpp"
 #include "CLifespan.hpp"
+#include "CCollision.hpp"
 
 #endif

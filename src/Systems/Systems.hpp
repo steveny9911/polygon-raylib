@@ -6,5 +6,6 @@
 #include "STimer.hpp"
 #include "SMovement.hpp"
 #include "SUserInput.hpp"
+#include "SCollision.hpp"
 
 #endif
