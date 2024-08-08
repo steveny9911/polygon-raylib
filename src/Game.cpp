@@ -94,6 +94,7 @@ void Game::spawnPlayer()
   player->addComponent<CHealth>();
   std::function<void()> spawnBullet = [this]()
   {
+    float bulletRadius = 10.0f;
     auto bullet = m_entityManager.addEntity("Bullet" + std::to_string(GetTime()));
 
     Vector2 target = GetMousePosition();
@@ -101,108 +102,120 @@ void Game::spawnPlayer()
     Vector2 velocity = Vector2Scale(Vector2Normalize(Vector2Subtract(target, origin)), SPEED);
     bullet->addComponent<CTransform>(origin, velocity);
 
-    bullet->addComponent<CShape>(std::make_unique<ShapeRing>(0.0f, 10.0f, WHITE));
+    bullet->addComponent<CShape>(std::make_unique<ShapeRing>(0.0f, bulletRadius, WHITE));
     bullet->addComponent<CLifespan>(20.0, GetTime());
+
+    std::function<void(std::shared_ptr<Entity>)> bulletCollision = [bullet](std::shared_ptr<Entity> other)
+    {
+      if (other->tag() == "Enemy")
+      {
+        other->destroy();
+        bullet->destroy();
+      }
+    };
+    bullet->addComponent<CCollision>(std::make_unique<ColliderCircle>(bulletRadius), bulletCollision);
   };
-  // player->addComponent<CTimer>(1.0, true, spawnBullet);
-  player->addComponent<CCollision>(std::make_unique<ColliderCircle>(radius));
+
+  player->addComponent<CTimer>(1.0, true, spawnBullet);
+  std::function<void(std::shared_ptr<Entity>)> playerCollision = [this](std::shared_ptr<Entity> other)
+  {
+    if (other->tag() == "Enemy")
+    {
+      this->setPaused(true);
+    }
+  };
+  player->addComponent<CCollision>(std::make_unique<ColliderCircle>(radius), playerCollision);
 
   m_player = player;
 }
 
 void Game::spawnEnemies()
 {
-  auto enemy = m_entityManager.addEntity("Enemy");
-  enemy->addComponent<CTransform>(Vector2{100, 100}, Vector2{0, 0});
+  enum Direction
+  {
+    UP,
+    DOWN,
+    LEFT,
+    RIGHT
+  };
 
-  enemy->addComponent<CShape>(std::make_unique<ShapeRing>(0.0f, 20.0f, BLUE));
-  enemy->addComponent<CCollision>(std::make_unique<ColliderCircle>(20.0f));
+  int totalEnemies = 100;
+  int numEnemies = 0;
+  float radius = 20.0f;
 
-  // enum Direction
-  // {
-  //   UP,
-  //   DOWN,
-  //   LEFT,
-  //   RIGHT
-  // };
+  const float stepSize = GetScreenHeight() / 10;
+  Direction direction = Direction::RIGHT;
+  Vector2 spawnOrigin{0.0f, 0.0f};
 
-  // int totalEnemies = 1;
-  // int numEnemies = 0;
-  // float radius = 20.0f;
+  auto enemySpawner = m_entityManager.addEntity("EnemySpawner");
+  std::function<void()> spawnEnemy = [=]() mutable
+  {
+    if (numEnemies > totalEnemies)
+    {
+      enemySpawner->destroy();
+    }
 
-  // const float stepSize = GetScreenHeight() / 10;
-  // Direction direction = Direction::RIGHT;
-  // Vector2 spawnOrigin{0.0f, 0.0f};
+    auto enemy = m_entityManager.addEntity("Enemy");
+    enemy->addComponent<CLifespan>(10.0, GetTime());
 
-  // auto enemySpawner = m_entityManager.addEntity("EnemySpawner");
-  // std::function<void()> spawnEnemy = [=]() mutable
-  // {
-  //   if (numEnemies > totalEnemies)
-  //   {
-  //     enemySpawner->destroy();
-  //   }
+    switch (direction)
+    {
+    case Direction::UP:
+      if (spawnOrigin.y - stepSize >= 0.0f)
+      {
+        spawnOrigin.y -= stepSize;
+      }
+      else
+      {
+        spawnOrigin.y = 0.0f;
+        direction = RIGHT;
+      }
+      break;
+    case Direction::DOWN:
+      if (spawnOrigin.y + stepSize <= GetScreenHeight())
+      {
+        spawnOrigin.y += stepSize;
+      }
+      else
+      {
+        spawnOrigin.y = GetScreenHeight();
+        direction = LEFT;
+      }
+      break;
+    case Direction::LEFT:
+      if (spawnOrigin.x - stepSize >= 0.0f)
+      {
+        spawnOrigin.x -= stepSize;
+      }
+      else
+      {
+        spawnOrigin.x = 0.0f;
+        direction = UP;
+      }
+      break;
+    case Direction::RIGHT:
+      if (spawnOrigin.x + stepSize <= GetScreenWidth())
+      {
+        spawnOrigin.x += stepSize;
+      }
+      else
+      {
+        spawnOrigin.x = GetScreenWidth();
+        direction = DOWN;
+      }
+      break;
+    default:
+      break;
+    }
 
-  //   auto enemy = m_entityManager.addEntity("Enemy" + std::to_string(numEnemies));
-  //   enemy->addComponent<CLifespan>(10.0, GetTime());
+    Vector2 target = m_player->getComponent<CTransform>().position;
+    Vector2 velocity = Vector2Scale(Vector2Normalize(Vector2Subtract(target, spawnOrigin)), SPEED / 3);
+    enemy->addComponent<CTransform>(spawnOrigin, velocity);
 
-  //   switch (direction)
-  //   {
-  //   case Direction::UP:
-  //     if (spawnOrigin.y - stepSize >= 0.0f)
-  //     {
-  //       spawnOrigin.y -= stepSize;
-  //     }
-  //     else
-  //     {
-  //       spawnOrigin.y = 0.0f;
-  //       direction = RIGHT;
-  //     }
-  //     break;
-  //   case Direction::DOWN:
-  //     if (spawnOrigin.y + stepSize <= GetScreenHeight())
-  //     {
-  //       spawnOrigin.y += stepSize;
-  //     }
-  //     else
-  //     {
-  //       spawnOrigin.y = GetScreenHeight();
-  //       direction = LEFT;
-  //     }
-  //     break;
-  //   case Direction::LEFT:
-  //     if (spawnOrigin.x - stepSize >= 0.0f)
-  //     {
-  //       spawnOrigin.x -= stepSize;
-  //     }
-  //     else
-  //     {
-  //       spawnOrigin.x = 0.0f;
-  //       direction = UP;
-  //     }
-  //     break;
-  //   case Direction::RIGHT:
-  //     if (spawnOrigin.x + stepSize <= GetScreenWidth())
-  //     {
-  //       spawnOrigin.x += stepSize;
-  //     }
-  //     else
-  //     {
-  //       spawnOrigin.x = GetScreenWidth();
-  //       direction = DOWN;
-  //     }
-  //     break;
-  //   default:
-  //     break;
-  //   }
+    enemy->addComponent<CShape>(std::make_unique<ShapeRing>(0.0f, 20.0f, BLUE));
+    enemy->addComponent<CCollision>(std::make_unique<ColliderCircle>(radius), [](std::shared_ptr<Entity> other) {});
 
-  //   Vector2 target = m_player->getComponent<CTransform>().position;
-  //   Vector2 velocity = Vector2Scale(Vector2Normalize(Vector2Subtract(target, spawnOrigin)), SPEED / 3);
-  //   enemy->addComponent<CTransform>(spawnOrigin, velocity);
-
-  //   enemy->addComponent<CShape>(std::make_unique<ShapeRing>(0.0f, 20.0f, BLUE));
-  //   enemy->addComponent<CCollision>(std::make_unique<ColliderCircle>(radius));
-
-  //   numEnemies += 1;
-  // };
-  // enemySpawner->addComponent<CTimer>(0.3f, true, spawnEnemy);
+    numEnemies += 1;
+  };
+  enemySpawner->addComponent<CTimer>(0.3f, true, spawnEnemy);
 }

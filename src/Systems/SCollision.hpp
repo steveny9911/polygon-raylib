@@ -24,19 +24,21 @@ public:
         if (!entityB->hasComponent<CTransform>() || !entityB->hasComponent<CCollision>())
           continue;
 
+        CCollision &collisionA = entityA->getComponent<CCollision>();
+
         CTransform &transformB = entityB->getComponent<CTransform>();
+        CCollision &collisionB = entityB->getComponent<CCollision>();
         ColliderCircle *colliderB = dynamic_cast<ColliderCircle *>(entityB->getComponent<CCollision>().collider.get());
         // std::unique_ptr<ColliderCircle> colliderB(static_cast<ColliderCircle *>(colliderBRaw));
 
-        std::cout << entityA->tag() << " isCollision " << entityB->tag() << " " << GetTime() <<"\n";
-
-        if (entityA->getComponent<CCollision>().collider->isCollision(transformA.position, transformB.position, colliderB->radius))
+        if (collisionA.collider->isCollision(transformA.position, transformB.position, colliderB->radius))
         {
-          std::cout << "Collision!" << "\n";
-          // entityA->getComponent<CCollision>().onCollision(entityB);
+          // std::cout << "Collision!" << "\n";
+
+          // entityA->getComponent<CCollision>().onCollision();
+          collisionA.onCollision(entityB);
+          collisionB.onCollision(entityA);
         }
-
-
       }
     }
   }
