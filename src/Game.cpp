@@ -10,7 +10,7 @@
 Game::Game()
 {
   m_window = raylib::Window();
-  m_window.Init(1080, 720, "Polygon Survivour");
+  m_window.Init(800, 450, "Polygon Survivour");
   SetTargetFPS(120);
 
   registerActions();
